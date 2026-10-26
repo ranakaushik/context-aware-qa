@@ -31,7 +31,7 @@ cp .env.example .env          # add GEMINI_API_KEY (optional)
 uvicorn qa_assistant.api:app --reload
 # open http://localhost:8000
 ```
-Full instructions: **[RUNNING.md](RUNNING.md)**.
+Full instructions: **[RUNNING.md](RUNNING.md)**. Free hosting (Render, Hugging Face Spaces, or your own server): **[DEPLOYMENT.md](DEPLOYMENT.md)**.
 
 PDF documents: [Functional specification](docs/pdf/functional_specification.pdf) · [Technical specification](docs/pdf/technical_specification.pdf) · [Architecture & data flow](docs/pdf/architecture.pdf)
 

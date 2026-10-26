@@ -1,0 +1,19 @@
+# Render Blueprint: free web service built from this repository (see DEPLOYMENT.md).
+services:
+  - type: web
+    name: context-aware-qa
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn qa_assistant.api:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: GEMINI_API_KEY
+        sync: false  # Render asks for the value when the Blueprint is created
+      - key: GEMINI_MODEL
+        value: gemini-flash-latest
+      - key: QA_MODE
+        value: auto
