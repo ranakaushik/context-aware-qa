@@ -10,7 +10,8 @@ from qa_assistant.config import get_settings
 from qa_assistant.knowledge_base import load_knowledge_base
 from qa_assistant.pipeline import QAAssistant
 from qa_assistant.prompts import ANSWER_SCHEMA, SYSTEM_PROMPT
-from qa_assistant.retriever import BM25Retriever, stem, tokenize
+from qa_assistant.retriever import BM25Retriever, RetrievedChunk, stem, tokenize
+from qa_assistant.vector_retriever import VectorRetriever, chunk_text, fuse
 
 
 @pytest.fixture(scope="module")
@@ -175,6 +176,92 @@ def test_auto_mode_uses_gemini_only_when_key_is_set(monkeypatch):
     monkeypatch.delenv("GEMINI_API_KEY")
     monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
     assert resolve_mode("auto") == "offline"
+
+
+# --- hybrid retrieval with a fake embedder -----------------------------------------------------
+
+class FakeEmbedder:
+    """One-hot vector per section; a query is embedded as the vector of the section mapped to it."""
+
+    model = "fake-embedding"
+
+    def __init__(self, chunks, query_targets=None, fail=False):
+        self.index = {chunk_text(c): i for i, c in enumerate(chunks)}
+        self.ids = [c.id for c in chunks]
+        self.query_targets = query_targets or {}
+        self.fail = fail
+        self.document_calls = 0
+
+    def one_hot(self, i):
+        return [1.0 if j == i else 0.0 for j in range(len(self.ids))]
+
+    def embed_documents(self, texts):
+        self.document_calls += 1
+        return [self.one_hot(self.index[t]) for t in texts]
+
+    def embed_query(self, text):
+        if self.fail:
+            from google.genai import errors
+            raise errors.ServerError(503, {"error": {"code": 503, "message": "high demand"}})
+        target = self.query_targets.get(text)
+        return self.one_hot(self.ids.index(target)) if target else [0.0] * len(self.ids)
+
+
+def hybrid_qa(tmp_path, payload, **embedder_args):
+    settings = get_settings()
+    chunks = load_knowledge_base(settings.kb_dir)
+    client, models = fake_gemini(payload)
+    vector = VectorRetriever(chunks, FakeEmbedder(chunks, **embedder_args), cache_dir=tmp_path)
+    return QAAssistant(settings, answerer=GeminiAnswerer("gemini-flash-latest", client=client), vector=vector), models
+
+
+def test_fuse_prefers_sections_found_by_both_searches():
+    chunks = load_knowledge_base(get_settings().kb_dir)
+    a, b, c = (RetrievedChunk(chunk, 1.0) for chunk in chunks[:3])
+    fused = fuse([[a, b], [c, b]], top_k=3)
+    assert fused[0].chunk.id == b.chunk.id
+    assert {r.chunk.id for r in fused} == {a.chunk.id, b.chunk.id, c.chunk.id}
+
+
+def test_semantic_search_finds_section_keyword_search_misses(tmp_path):
+    question = "Is my puppy welcome?"  # shares no term with the knowledge base
+    target = "remote_work_policy#hybrid-work-model"
+    qa, models = hybrid_qa(tmp_path, {
+        "status": "not_found", "answer": "x", "citations": [], "missing_information": "pets",
+    }, query_targets={question: target})
+    assert qa.retriever.search(question) == []
+    answer = qa.ask(question)
+    assert [r.id for r in answer.retrieved] == [target]
+    assert models.last_request is not None
+    assert qa.retrieval == "hybrid"
+
+
+def test_off_topic_question_still_skips_the_model_in_hybrid_mode(tmp_path):
+    qa, models = hybrid_qa(tmp_path, {})
+    assert qa.ask("Who won the cricket World Cup?").status == "not_found"
+    assert models.last_request is None
+
+
+def test_section_embeddings_are_cached(tmp_path):
+    chunks = load_knowledge_base(get_settings().kb_dir)
+    first = FakeEmbedder(chunks)
+    VectorRetriever(chunks, first, cache_dir=tmp_path).search("leave")
+    second = FakeEmbedder(chunks)
+    VectorRetriever(chunks, second, cache_dir=tmp_path).search("leave")
+    assert (first.document_calls, second.document_calls) == (1, 0)
+
+
+def test_embedding_failure_falls_back_to_keyword_search(tmp_path):
+    qa, models = hybrid_qa(tmp_path, {
+        "status": "answered",
+        "answer": "No. At most 10 days can be carried forward.",
+        "citations": ["leave_policy#carry-forward-of-annual-leave"],
+        "missing_information": "",
+    }, fail=True)
+    answer = qa.ask("Can employees carry forward more than 10 days of leave?")
+    assert answer.status == "answered"
+    assert answer.retrieved[0].id == "leave_policy#carry-forward-of-annual-leave"
+    assert any("only keyword search" in n for n in answer.notes)
 
 
 # --- HTTP API ---------------------------------------------------------------------------------

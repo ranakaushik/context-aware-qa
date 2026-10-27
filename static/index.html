@@ -239,7 +239,7 @@ function renderHistory() {
 }
 
 fetch("/api/health").then((r) => r.json()).then((h) => {
-  const label = h.mode === "gemini" ? `Gemini · ${h.model}` : "Offline mode (no API key)";
+  const label = h.mode === "gemini" ? `Gemini · ${h.model} · ${h.retrieval} search` : "Offline mode (no API key)";
   $("modeInfo").innerHTML = `<span class="dot ${h.mode}"></span>${esc(label)}<br>${h.documents.length} documents · ${h.chunks} sections`;
 }).catch(() => { $("modeInfo").innerHTML = `<span class="dot"></span>Server not reachable`; });
 

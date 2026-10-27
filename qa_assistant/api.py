@@ -41,6 +41,7 @@ def health() -> dict:
         "status": "ok",
         "mode": qa.mode,
         "model": qa.model,
+        "retrieval": qa.retrieval,
         "chunks": len(qa.chunks),
         "documents": sorted({c.source for c in qa.chunks}),
     }

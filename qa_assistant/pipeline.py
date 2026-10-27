@@ -3,6 +3,9 @@
 import time
 from dataclasses import asdict, dataclass, field
 
+import httpx
+from google.genai import errors as genai_errors
+
 from qa_assistant.answerers import (
     AnswerError,
     Draft,
@@ -13,6 +16,7 @@ from qa_assistant.answerers import (
 from qa_assistant.config import Settings, get_settings, resolve_mode
 from qa_assistant.knowledge_base import load_knowledge_base
 from qa_assistant.retriever import BM25Retriever, RetrievedChunk
+from qa_assistant.vector_retriever import GeminiEmbedder, VectorRetriever, fuse
 
 
 @dataclass
@@ -49,7 +53,9 @@ def to_source(r: RetrievedChunk) -> Source:
 
 
 class QAAssistant:
-    def __init__(self, settings: Settings | None = None, answerer=None):
+    def __init__(self, settings: Settings | None = None, answerer=None, vector: VectorRetriever | None = None):
+        """An injected answerer (as in the tests) gets keyword-only retrieval unless a vector retriever
+        is injected too, so no embedding API calls happen behind the caller's back."""
         self.settings = settings or get_settings()
         self.chunks = load_knowledge_base(self.settings.kb_dir)
         self.retriever = BM25Retriever(self.chunks)
@@ -57,9 +63,17 @@ class QAAssistant:
             mode = resolve_mode(self.settings.mode)
             if mode == "gemini":
                 answerer = GeminiAnswerer(self.settings.gemini_model)
+                if self.settings.retrieval == "hybrid":
+                    vector = VectorRetriever(
+                        self.chunks,
+                        GeminiEmbedder(self.settings.embedding_model, client=answerer.client),
+                        cache_dir=self.settings.cache_dir,
+                        min_similarity=self.settings.min_similarity,
+                    )
             else:
                 answerer = ExtractiveAnswerer(self.retriever.idf)
         self.answerer = answerer
+        self.vector = vector
 
     @property
     def mode(self) -> str:
@@ -68,6 +82,24 @@ class QAAssistant:
     @property
     def model(self) -> str | None:
         return self.settings.gemini_model if self.mode == "gemini" else None
+
+    @property
+    def retrieval(self) -> str:
+        return "hybrid" if self.vector else "keyword"
+
+    def retrieve(self, question: str, search_query: str) -> tuple[list[RetrievedChunk], list[str]]:
+        """BM25 on the spelling-corrected query, plus (in hybrid mode) embedding search on the question as
+        typed, merged by rank. Returns the chunks and any notes for the user."""
+        top_k = self.settings.top_k
+        keyword = self.retriever.search(search_query, top_k)
+        if self.vector is None:
+            return keyword, []
+        try:
+            semantic = self.vector.search(question, top_k)
+        except (genai_errors.APIError, httpx.HTTPError, OSError):
+            # Embeddings are an improvement, not a requirement: answer from keyword search alone.
+            return keyword, ["Semantic search was unavailable, so only keyword search was used."]
+        return fuse([keyword, semantic], top_k), []
 
     def ask(self, question: str) -> Answer:
         question = question.strip()
@@ -78,17 +110,18 @@ class QAAssistant:
 
         start = time.perf_counter()
         search_query, corrections = self.retriever.correct_spelling(question)
-        retrieved = self.retriever.search(search_query, self.settings.top_k)
+        retrieved, retrieval_notes = self.retrieve(question, search_query)
         if retrieved:
             # Gemini copes with typos itself and sees the original wording; the offline answerer needs
             # the corrected words.
             answer_question = search_query if self.mode == "offline" else question
             draft = self.answerer.answer(answer_question, retrieved)
         else:
-            # Nothing in the knowledge base shares a term with the question: skip the model call.
-            draft = not_found("No knowledge-base section shares any key term with the question.")
+            # No section shares a term with the question or is close in meaning: skip the model call.
+            draft = not_found("No knowledge-base section matches the question's terms or meaning.")
 
         answer = self._finalize(question, draft, retrieved, start)
+        answer.notes.extend(retrieval_notes)
         if corrections:
             answer.notes.insert(0, "Searched for " + ", ".join(f"'{new}' (you typed '{old}')" for old, new in corrections))
         return answer
