@@ -4,6 +4,7 @@ from types import SimpleNamespace
 import pytest
 from fastapi.testclient import TestClient
 
+import qa_assistant
 from qa_assistant import api
 from qa_assistant.answerers import GeminiAnswerer, to_sentences
 from qa_assistant.config import get_settings
@@ -269,7 +270,9 @@ def test_embedding_failure_falls_back_to_keyword_search(tmp_path):
 def test_api_ask_and_health(monkeypatch, offline_qa):
     monkeypatch.setattr(api, "get_assistant", lambda: offline_qa)
     client = TestClient(api.app)
-    assert client.get("/api/health").json()["mode"] == "offline"
+    health = client.get("/api/health").json()
+    assert health["mode"] == "offline"
+    assert health["version"] == qa_assistant.__version__
     response = client.post("/api/ask", json={"question": "How much is the home office stipend?"})
     assert response.status_code == 200
     assert "₹25,000" in response.json()["answer"]

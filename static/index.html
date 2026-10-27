@@ -57,6 +57,7 @@
   .history { flex: 1 1 auto; }
   .side-foot { margin-top: auto; padding: 10px; font-size: .78rem; color: var(--muted); border-top: 1px solid var(--border); }
   .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; background: var(--faint); }
+  .side-foot .version { color: var(--faint); }
   .dot.gemini { background: var(--lime); } .dot.offline { background: #d2a33a; }
 
   /* ---------- main ---------- */
@@ -71,6 +72,8 @@
   .topbar { display: flex; align-items: center; gap: 10px; padding: 10px 16px; min-height: 52px; }
   .menu-btn { display: none; border: 0; background: transparent; padding: 6px; border-radius: 8px; cursor: pointer; }
   .menu-btn:hover { background: var(--hover); }
+  .version-badge { margin-left: auto; flex-shrink: 0; padding: 3px 10px; border-radius: 999px; font-size: .75rem;
+    font-weight: 600; color: var(--accent); background: var(--accent-soft); border: 1px solid var(--border); }
   .chat-title { font-size: .92rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
   .scroll { flex: 1; overflow-y: auto; }
@@ -172,6 +175,7 @@
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3 5h14M3 10h14M3 15h14"/></svg>
       </button>
       <div class="chat-title" id="chatTitle"></div>
+      <span class="version-badge" id="versionBadge" hidden></span>
     </div>
 
     <div class="scroll" id="scroll">
@@ -240,7 +244,10 @@ function renderHistory() {
 
 fetch("/api/health").then((r) => r.json()).then((h) => {
   const label = h.mode === "gemini" ? `Gemini · ${h.model} · ${h.retrieval} search` : "Offline mode (no API key)";
-  $("modeInfo").innerHTML = `<span class="dot ${h.mode}"></span>${esc(label)}<br>${h.documents.length} documents · ${h.chunks} sections`;
+  $("versionBadge").textContent = `v${h.version}`;
+  $("versionBadge").title = `Policy Assistant version ${h.version}`;
+  $("versionBadge").hidden = false;
+  $("modeInfo").innerHTML = `<span class="dot ${h.mode}"></span>${esc(label)}<br>${h.documents.length} documents · ${h.chunks} sections<br><span class="version">Version ${esc(h.version)}</span>`;
 }).catch(() => { $("modeInfo").innerHTML = `<span class="dot"></span>Server not reachable`; });
 
 fetch("/api/documents").then((r) => r.json()).then((docs) => {

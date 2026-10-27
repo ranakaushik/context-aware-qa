@@ -10,13 +10,14 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from qa_assistant import __version__
 from qa_assistant.answerers import AnswerError
 from qa_assistant.config import PROJECT_ROOT
 from qa_assistant.pipeline import QAAssistant
 
 STATIC_DIR = PROJECT_ROOT / "static"
 
-app = FastAPI(title="Context-Aware Q&A Assistant", version="1.0.0")
+app = FastAPI(title="Context-Aware Q&A Assistant", version=__version__)
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
@@ -39,6 +40,7 @@ def health() -> dict:
     qa = get_assistant()
     return {
         "status": "ok",
+        "version": __version__,
         "mode": qa.mode,
         "model": qa.model,
         "retrieval": qa.retrieval,

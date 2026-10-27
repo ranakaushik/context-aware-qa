@@ -1,5 +1,7 @@
 """Context-Aware Q&A Assistant: answers questions using only a supplied knowledge base."""
 
-from qa_assistant.pipeline import Answer, QAAssistant
+__version__ = "1.1.0"
 
-__all__ = ["Answer", "QAAssistant"]
+from qa_assistant.pipeline import Answer, QAAssistant  # noqa: E402
+
+__all__ = ["Answer", "QAAssistant", "__version__"]
