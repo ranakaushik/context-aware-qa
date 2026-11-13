@@ -87,7 +87,7 @@ flowchart TB
     subgraph EXT["Google Gemini API"]
         direction LR
         EMB{{"gemini-embedding-001"}}
-        LLM{{"gemini-flash-latest"}}
+        LLM{{"gemini-3.5-flash"}}
     end
 
     UI -- "HTTP / JSON" --> API --> PIPE
@@ -171,7 +171,7 @@ sequenceDiagram
 | 6 | Rank fusion | Reciprocal Rank Fusion: score = Σ 1 / (60 + rank); keep the top 5. | Custom code | Combines rankings with different score scales; sections found by both searches rise to the top. |
 | 7 | Off-topic gate | If no section is retrieved, return `not_found` immediately. | Pipeline logic | Saves the API call and removes any chance of a hallucinated answer. |
 | 8 | Prompt construction | System prompt with grounding rules; user message wraps sections in `<context>` with their ids, followed by the `<question>`. | `prompts.py` | Restricts the model to the excerpts, defines statuses, keeps ₹ formatting, resists prompt injection. |
-| 9 | Generation | One call with `response_mime_type = application/json` and a JSON schema. | **Google Gemini `gemini-flash-latest`** via `google-genai` SDK | Reads the excerpts and writes a short answer, a status and citations. |
+| 9 | Generation | One call with `response_mime_type = application/json` and a JSON schema. | **Google Gemini `gemini-3.5-flash`** via `google-genai` SDK | Reads the excerpts and writes a short answer, a status and citations. |
 | 10 | Post-processing | Parse JSON; map safety blocks to `not_found`; drop citations not in the supplied sections; add notes; measure latency. | Python `json`, dataclasses | Guarantees every cited source is real and traceable. |
 | 11 | Delivery | Return the answer as JSON; render a status badge, answer, sources and retrieved context. | **FastAPI**, **Uvicorn**, **Pydantic**; HTML/CSS/JavaScript | Makes the system usable by employees and other programs. |
 | 12 | Offline fallback | Without an API key: IDF-weighted coverage check (≥ 0.65) and best-sentence or table extraction; keyword retrieval only. | Custom code | Works with no external service; serves as a baseline. |
@@ -181,7 +181,7 @@ sequenceDiagram
 
 | Category | Name | Used for |
 |---|---|---|
-| Large language model | **Google Gemini** `gemini-flash-latest` (configurable via `GEMINI_MODEL`) | Grounded answer generation with structured JSON output |
+| Large language model | **Google Gemini** `gemini-3.5-flash` (configurable via `GEMINI_MODEL`) | Grounded answer generation with structured JSON output |
 | Embedding model | **Google Gemini** `gemini-embedding-001`, 768 dimensions | Semantic (vector) search over policy sections |
 | LLM SDK | `google-genai` | Calls to the Gemini generation and embedding APIs |
 | Retrieval | Custom **BM25** and **Reciprocal Rank Fusion** (pure Python) | Keyword ranking and hybrid merging; no external search engine or vector database needed at this size |

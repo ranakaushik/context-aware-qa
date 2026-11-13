@@ -62,7 +62,7 @@ class QAAssistant:
         if answerer is None:
             mode = resolve_mode(self.settings.mode)
             if mode == "gemini":
-                answerer = GeminiAnswerer(self.settings.gemini_model)
+                answerer = GeminiAnswerer(self.settings.gemini_model, timeout_s=self.settings.gemini_timeout_s)
                 if self.settings.retrieval == "hybrid":
                     vector = VectorRetriever(
                         self.chunks,

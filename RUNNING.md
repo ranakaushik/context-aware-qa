@@ -33,13 +33,13 @@ cp .env.example .env
 Create a key at <https://aistudio.google.com/apikey>, then open `.env` and set:
 ```
 GEMINI_API_KEY=AIza...
-GEMINI_MODEL=gemini-flash-latest
+GEMINI_MODEL=gemini-3.5-flash
 ```
 To see which Gemini models your key can use, and pin one of them:
 ```bash
 python -m qa_assistant.gemini_models
 ```
-Copy a name from the list into `GEMINI_MODEL` (for example `gemini-3-flash-preview` or `gemini-3.1-pro-preview`). The default `gemini-flash-latest` always follows Google's current Flash model.
+Copy a name from the list into `GEMINI_MODEL` (for example `gemini-3-flash-preview` or `gemini-3.1-pro-preview`). The default is `gemini-3.5-flash`. Avoid the moving alias `gemini-flash-latest`: in Oct 2026 it took minutes per answer. `GEMINI_TIMEOUT_S` (default 60) caps how long one Gemini call may take.
 
 **Mode** — `QA_MODE` in `.env`:
 

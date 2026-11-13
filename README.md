@@ -12,7 +12,7 @@ A question-answering system that answers **only** from a supplied knowledge base
 
 ## Features
 - Hybrid retrieval over section-level chunks of Markdown policy files: BM25 keyword search plus semantic search with Gemini embeddings (`gemini-embedding-001`), merged with Reciprocal Rank Fusion; keyword-only when offline
-- Grounded answers from **Google Gemini** (`gemini-flash-latest` by default, configurable) with a strict prompt and a JSON-schema output: `answered` / `partial` / `not_found`
+- Grounded answers from **Google Gemini** (`gemini-3.5-flash` by default, configurable) with a strict prompt and a JSON-schema output: `answered` / `partial` / `not_found`
 - `python -m qa_assistant.gemini_models` lists the Gemini models your key can use
 - Sources for every answer; invented citations are filtered out
 - Off-topic questions short-circuit to "not found" without a model call

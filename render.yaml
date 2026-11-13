@@ -14,6 +14,8 @@ services:
       - key: GEMINI_API_KEY
         sync: false  # Render asks for the value when the Blueprint is created
       - key: GEMINI_MODEL
-        value: gemini-flash-latest
+        value: gemini-3.5-flash
+      - key: GEMINI_TIMEOUT_S
+        value: "60"
       - key: QA_MODE
         value: auto

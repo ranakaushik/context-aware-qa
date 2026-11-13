@@ -66,7 +66,7 @@ What `render.yaml` sets up:
 | Start command | `uvicorn qa_assistant.api:app --host 0.0.0.0 --port $PORT` |
 | Health check | `/api/health` |
 | Python | 3.12.7 |
-| Environment | `GEMINI_API_KEY` (you enter it), `GEMINI_MODEL=gemini-flash-latest`, `QA_MODE=auto` |
+| Environment | `GEMINI_API_KEY` (you enter it), `GEMINI_MODEL=gemini-3.5-flash`, `GEMINI_TIMEOUT_S=60`, `QA_MODE=auto` |
 
 > **Without the Blueprint** (manual setup): **New +** → **Web Service** → pick the repository → Runtime **Python 3**, Build Command and Start Command as in the table, Instance Type **Free**. Under **Environment** add `PYTHON_VERSION=3.12.7`, `GEMINI_API_KEY=<your key>` and any other variables from the table.
 
@@ -241,6 +241,6 @@ A public URL means anyone can ask questions, and each question uses your Gemini 
 | Spaces: push rejected, "binary files" | A PDF/PNG is still in the pushed branch — repeat B.4, which removes `docs/pdf` and `screenshots`. |
 | `/api/health` shows `"mode":"offline"` | `GEMINI_API_KEY` not set on the host (check spelling), or service not redeployed after adding it. |
 | "Gemini rejected the credentials" | Wrong or revoked key — create a new one in AI Studio and update the secret. |
-| "Gemini is unavailable right now (error 503/504)" or slow answers | Google's API is overloaded. Try again later, or set `GEMINI_MODEL=gemini-flash-lite-latest`. |
+| "Gemini is unavailable right now (error 503/504)" or slow answers | Google's API is overloaded. Try again later, or set `GEMINI_MODEL=gemini-flash-lite-latest`. Answers that take minutes usually mean `GEMINI_MODEL` is the `gemini-flash-latest` alias; set it to `gemini-3.5-flash`. |
 | First page load takes ~1 minute (Render) | The free service was asleep — see A.6. |
 | 502 from Caddy (option C) | The app isn't running: `systemctl status qa`, `journalctl -u qa -n 50`. |

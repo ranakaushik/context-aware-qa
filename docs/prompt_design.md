@@ -96,6 +96,6 @@ Passed to Gemini as `response_json_schema` (with `response_mime_type="applicatio
 
 ## Model settings
 
-- Google Gemini, `GEMINI_MODEL` (default `gemini-flash-latest`, an alias that follows Google's current Flash model; pin a specific model from `python -m qa_assistant.gemini_models` for reproducible results).
+- Google Gemini, `GEMINI_MODEL` (default `gemini-3.5-flash`; other models are listed by `python -m qa_assistant.gemini_models`).
 - The system prompt is passed as `system_instruction`; the schema as `response_json_schema` with `response_mime_type="application/json"`.
 - If Gemini blocks a response for safety reasons, the app returns `not_found` instead of failing.
