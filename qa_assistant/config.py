@@ -24,6 +24,7 @@ class Settings:
     min_similarity: float = 0.6  # cosine similarity below which a section is not a semantic match
     cache_dir: Path | None = None  # where section embeddings are cached; None disables the cache
     max_question_chars: int = 1000
+    gemini_timeout_s: int = 60  # a Gemini call taking longer fails with a clear error instead of hanging
 
 
 def has_gemini_credentials() -> bool:
@@ -37,9 +38,11 @@ def get_settings(**overrides) -> Settings:
 
     values = {
         "kb_dir": kb_dir,
-        # An alias that always points at Google's current Flash model; pin a name such as
-        # "gemini-3-flash-preview" for reproducible results (list them with `python -m qa_assistant.gemini_models`).
-        "gemini_model": os.getenv("GEMINI_MODEL", "gemini-flash-latest"),
+        # Pinned rather than "gemini-flash-latest": that alias moves with Google's releases and in Oct 2026
+        # took minutes per answer. List alternatives with `python -m qa_assistant.gemini_models`.
+        "gemini_model": os.getenv("GEMINI_MODEL", "gemini-3.5-flash"),
+        # Google rejects deadlines under 10 seconds.
+        "gemini_timeout_s": max(10, int(os.getenv("GEMINI_TIMEOUT_S", "60"))),
         "top_k": int(os.getenv("QA_TOP_K", "5")),
         "mode": os.getenv("QA_MODE", "auto"),
         "retrieval": os.getenv("QA_RETRIEVAL", "hybrid"),

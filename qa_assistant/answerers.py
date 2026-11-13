@@ -34,10 +34,12 @@ class GeminiAnswerer:
 
     name = "gemini"
 
-    def __init__(self, model: str, client: genai.Client | None = None):
+    def __init__(self, model: str, client: genai.Client | None = None, timeout_s: int = 60):
         self.model = model
-        # genai.Client() reads GEMINI_API_KEY (or GOOGLE_API_KEY) from the environment.
-        self.client = client or genai.Client()
+        self.timeout_s = timeout_s
+        # genai.Client() reads GEMINI_API_KEY (or GOOGLE_API_KEY) from the environment. The timeout is
+        # also sent to Google as the request deadline; the SDK does not retry by default.
+        self.client = client or genai.Client(http_options=genai_types.HttpOptions(timeout=timeout_s * 1000))
 
     def answer(self, question: str, retrieved: list[RetrievedChunk]) -> Draft:
         try:
@@ -64,6 +66,11 @@ class GeminiAnswerer:
                 raise AnswerError("Gemini rate limit or quota reached. Wait a moment and try again.") from e
             raise AnswerError(f"Gemini API error {e.code}: {e.message}") from e
         except genai_errors.APIError as e:
+            if e.code == 504:
+                raise AnswerError(
+                    f"Gemini model '{self.model}' did not answer within {self.timeout_s} seconds. Try again, "
+                    "or set GEMINI_MODEL to a faster model."
+                ) from e
             raise AnswerError(f"Gemini API error {e.code}: {e.message}") from e
         except OSError as e:
             raise AnswerError("Could not reach the Gemini API. Check your network connection.") from e

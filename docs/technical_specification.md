@@ -11,7 +11,7 @@
 | Layer | Choice | Why |
 |---|---|---|
 | Language | Python 3.10+ (developed on 3.14) | Standard for AI tooling. |
-| LLM | Google Gemini (`GEMINI_MODEL`, default `gemini-flash-latest`) via the official `google-genai` Python SDK | System instruction plus JSON-schema output for grounded, machine-readable answers. |
+| LLM | Google Gemini (`GEMINI_MODEL`, default `gemini-3.5-flash`) via the official `google-genai` Python SDK | System instruction plus JSON-schema output for grounded, machine-readable answers. |
 | Retrieval | BM25 keyword search implemented in pure Python | Knowledge base is small (≈50 sections); no vector DB or embedding service needed; fully explainable scores. |
 | Web | FastAPI + Uvicorn, one static HTML page (vanilla JS) | Small, typed, auto-generated OpenAPI docs at `/docs`. |
 | Config | Environment variables / `.env` via `python-dotenv` | Keeps secrets out of code. |
@@ -73,7 +73,8 @@ One call to `client.models.generate_content` (`google-genai` SDK; `genai.Client(
 
 | Parameter | Value |
 |---|---|
-| `model` | `GEMINI_MODEL`, default `gemini-flash-latest` (alias that follows Google's current Flash model) |
+| `model` | `GEMINI_MODEL`, default `gemini-3.5-flash` |
+| timeout | `GEMINI_TIMEOUT_S`, default 60 s (sent as the request deadline; a 504 becomes a clear error) |
 | `contents` | `<context><document id=… source=… section=…>…</document>…</context>` + `<question>…</question>` |
 | `config.system_instruction` | `SYSTEM_PROMPT` (grounding rules — see [prompt_design.md](prompt_design.md)) |
 | `config.response_mime_type` / `response_json_schema` | `application/json` / `ANSWER_SCHEMA` (status enum, answer, citations[], missing_information) — guarantees parseable output |
@@ -136,7 +137,8 @@ Example response:
 | Variable | Default | Meaning |
 |---|---|---|
 | `GEMINI_API_KEY` | – | Gemini API key (from Google AI Studio). `GOOGLE_API_KEY` also works. |
-| `GEMINI_MODEL` | `gemini-flash-latest` | Gemini model id; list options with `python -m qa_assistant.gemini_models` |
+| `GEMINI_MODEL` | `gemini-3.5-flash` | Gemini model id; list options with `python -m qa_assistant.gemini_models` |
+| `GEMINI_TIMEOUT_S` | `60` | Seconds before a Gemini call is abandoned (minimum 10) |
 | `QA_MODE` | `auto` | `auto` (Gemini if `GEMINI_API_KEY` is set, else offline), `gemini`, `offline` |
 | `QA_TOP_K` | `5` | Sections passed to the model |
 | `QA_KB_DIR` | `knowledge_base` | Folder with policy files |

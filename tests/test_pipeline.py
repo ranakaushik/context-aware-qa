@@ -3,10 +3,11 @@ from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
+from google.genai import errors as genai_errors
 
 import qa_assistant
 from qa_assistant import api
-from qa_assistant.answerers import GeminiAnswerer, to_sentences
+from qa_assistant.answerers import AnswerError, GeminiAnswerer, to_sentences
 from qa_assistant.config import get_settings
 from qa_assistant.knowledge_base import load_knowledge_base
 from qa_assistant.pipeline import QAAssistant
@@ -168,6 +169,21 @@ def test_gemini_safety_block_becomes_not_found():
     client, _ = fake_gemini({}, finish_reason="SAFETY")
     qa = QAAssistant(get_settings(), answerer=GeminiAnswerer("gemini-flash-latest", client=client))
     assert qa.ask("How many sick days do I get?").status == "not_found"
+
+
+def test_gemini_deadline_becomes_clear_error():
+    def timed_out(**_):
+        raise genai_errors.ServerError(504, {"error": {"message": "Deadline expired", "status": "DEADLINE_EXCEEDED"}})
+
+    client = SimpleNamespace(models=SimpleNamespace(generate_content=timed_out))
+    qa = QAAssistant(get_settings(), answerer=GeminiAnswerer("gemini-3.5-flash", client=client, timeout_s=60))
+    with pytest.raises(AnswerError, match="did not answer within 60 seconds"):
+        qa.ask("How many sick days do I get?")
+
+
+def test_gemini_timeout_setting_has_a_floor(monkeypatch):
+    monkeypatch.setenv("GEMINI_TIMEOUT_S", "3")
+    assert get_settings().gemini_timeout_s == 10
 
 
 def test_auto_mode_uses_gemini_only_when_key_is_set(monkeypatch):

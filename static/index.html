@@ -35,7 +35,9 @@
 
   /* ---------- sidebar ---------- */
   .sidebar { width: 272px; flex-shrink: 0; background: var(--sidebar); border-right: 1px solid var(--border);
-             display: flex; flex-direction: column; padding: 14px 10px; gap: 6px; }
+             display: flex; flex-direction: column; padding: 14px 10px; gap: 6px; overflow: hidden; }
+  /* only the Recents list shrinks (and scrolls) when the sidebar is short; everything else keeps its height */
+  .sidebar > * { flex-shrink: 0; }
   .brand { display: flex; align-items: center; gap: 10px; padding: 6px 8px 14px; font-family: var(--serif);
            font-size: 1.2rem; font-weight: 600; letter-spacing: -.01em; }
   .brand-mark { width: 26px; height: 26px; border-radius: 7px; background: var(--accent); color: var(--on-accent);
@@ -47,14 +49,15 @@
                     display: grid; place-items: center; font-size: 17px; line-height: 1; }
   .side-label { font-size: .75rem; font-weight: 600; color: var(--muted); padding: 14px 10px 4px; }
   .side-list { overflow-y: auto; display: flex; flex-direction: column; gap: 1px; min-height: 0; }
-  .side-item { display: block; width: 100%; padding: 7px 10px; border: 0; border-radius: 8px; background: transparent;
+  /* flex-shrink: 0 — with overflow: hidden an item may otherwise shrink below its line height and clip its text */
+  .side-item { display: block; flex-shrink: 0; width: 100%; padding: 7px 10px; border: 0; border-radius: 8px; background: transparent;
                text-align: left; cursor: pointer; font-size: .9rem; white-space: nowrap; overflow: hidden;
                text-overflow: ellipsis; color: var(--text); }
   .side-item:hover { background: var(--hover); }
   .side-item.active { background: var(--hover); font-weight: 500; }
   .side-doc { cursor: default; color: var(--muted); }
   .side-doc:hover { background: transparent; }
-  .history { flex: 1 1 auto; }
+  .sidebar > .history { flex: 1 1 0; }
   .side-foot { margin-top: auto; padding: 10px; font-size: .78rem; color: var(--muted); border-top: 1px solid var(--border); }
   .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; background: var(--faint); }
   .side-foot .version { color: var(--faint); }
